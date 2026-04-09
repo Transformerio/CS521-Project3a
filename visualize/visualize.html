@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cryptographic Accumulators — Interactive Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,400;0,500;0,700&display=swap');
+
+  :root {
+    --bg: #0c0e13; --bg2: #13161d; --bg3: #1a1e28; --bg4: #232836;
+    --fg: #e2e4ea; --fg2: #9ba0b0; --fg3: #636878;
+    --accent: #6c9eff; --accent2: #4a7ae6;
+    --green: #3dd68c; --green-bg: #162a22;
+    --red: #f06c6c; --red-bg: #2a1616;
+    --amber: #f0b040; --amber-bg: #2a2416;
+    --purple: #a78bfa; --purple-bg: #1e1a2e;
+    --teal: #2dd4bf; --teal-bg: #122a28;
+    --coral: #f08c6c; --coral-bg: #2a1e16;
+    --mono: 'DM Mono', 'Consolas', monospace;
+    --sans: 'DM Sans', system-ui, sans-serif;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--fg); min-height: 100vh; }
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+  h1 span { color: var(--accent); }
+  .subtitle { font-size: 14px; color: var(--fg3); margin-bottom: 1.5rem; }
+
+  /* ── Top-level scheme switcher ── */
+  .scheme-bar { display: flex; gap: 0; margin-bottom: 1.5rem; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--bg4); }
+  .scheme-btn {
+    flex: 1; padding: 12px 16px; text-align: center; cursor: pointer; font-family: var(--sans);
+    font-size: 14px; font-weight: 600; background: var(--bg2); color: var(--fg3);
+    border: none; transition: all 0.2s; position: relative;
+  }
+  .scheme-btn:not(:last-child) { border-right: 1px solid var(--bg4); }
+  .scheme-btn:hover { background: var(--bg3); color: var(--fg2); }
+  .scheme-btn.active { background: var(--bg3); color: var(--accent); }
+  .scheme-btn .tag {
+    font-size: 10px; padding: 2px 6px; border-radius: 8px;
+    margin-left: 6px; vertical-align: middle; font-weight: 500;
+  }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: var(--bg2); border: 1px solid var(--bg4); border-radius: var(--radius); padding: 1.25rem; }
+  .card-label {
+    font-size: 11px; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 1.2px; color: var(--fg3); margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+  .param-row { display: flex; gap: 12px; margin-bottom: 4px; font-family: var(--mono); font-size: 13px; }
+  .param-key { color: var(--fg3); min-width: 36px; }
+  .param-val { color: var(--fg2); word-break: break-all; overflow: hidden; text-overflow: ellipsis; }
+
+  .elem-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .elem-chip {
+    padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+    cursor: pointer; border: 1.5px solid var(--bg4); background: var(--bg3);
+    color: var(--fg2); transition: all 0.15s; user-select: none;
+  }
+  .elem-chip:hover { border-color: var(--accent); color: var(--fg); }
+  .elem-chip.in { background: var(--accent2); border-color: var(--accent); color: #fff; }
+
+  .mapping-table { width: 100%; border-collapse: collapse; }
+  .mapping-table th {
+    text-align: left; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--fg3); padding: 6px 8px;
+    border-bottom: 1px solid var(--bg4); font-weight: 500;
+  }
+  .mapping-table td {
+    padding: 7px 8px; font-family: var(--mono); font-size: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--fg2);
+  }
+  .mapping-table td:first-child { font-family: var(--sans); font-weight: 500; color: var(--fg); }
+  .mapping-table tr.highlight td { background: rgba(108,158,255,0.06); }
+
+  .acc-display {
+    font-family: var(--mono); font-size: 13px; color: var(--accent);
+    background: var(--bg3); border-radius: var(--radius-sm);
+    padding: 12px 14px; word-break: break-all; line-height: 1.7;
+    border-left: 3px solid var(--accent);
+  }
+  .acc-display.teal { border-left-color: var(--teal); color: var(--teal); }
+
+  .flow { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 12px 0; font-size: 13px; }
+  .flow-box {
+    padding: 4px 10px; border-radius: var(--radius-sm); font-family: var(--mono); font-size: 12px;
+    background: var(--bg3); border: 1px solid var(--bg4); white-space: nowrap;
+  }
+  .flow-box.hl { background: rgba(108,158,255,0.12); border-color: var(--accent); color: var(--accent); }
+  .flow-box.gr { background: var(--green-bg); border-color: var(--green); color: var(--green); }
+  .flow-box.tl { background: var(--teal-bg); border-color: var(--teal); color: var(--teal); }
+  .flow-op { color: var(--fg3); font-family: var(--mono); font-size: 14px; }
+
+  .tab-bar { display: flex; border-bottom: 1px solid var(--bg4); margin-bottom: 16px; }
+  .tab-btn {
+    padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer;
+    border: none; background: none; color: var(--fg3);
+    border-bottom: 2px solid transparent; font-family: var(--sans); transition: all 0.15s;
+  }
+  .tab-btn:hover { color: var(--fg2); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .proof-select { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .proof-chip {
+    padding: 4px 14px; border-radius: 16px; font-size: 13px; cursor: pointer;
+    border: 1.5px solid var(--bg4); background: var(--bg3); color: var(--fg2);
+    transition: all 0.15s; font-family: var(--sans);
+  }
+  .proof-chip:hover { border-color: var(--fg3); }
+  .proof-chip.active { border-color: var(--purple); background: var(--purple-bg); color: var(--purple); }
+
+  .proof-card {
+    background: var(--bg3); border-radius: var(--radius); padding: 1.25rem;
+    border: 1px solid var(--bg4); animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+  .proof-title { font-weight: 700; font-size: 15px; margin-bottom: 14px; }
+  .step {
+    padding: 10px 14px; margin: 6px 0; border-radius: var(--radius-sm);
+    border-left: 3px solid var(--bg4); background: var(--bg); font-size: 13px; line-height: 1.7;
+  }
+  .step.ok { border-left-color: var(--green); }
+  .step.teal { border-left-color: var(--teal); }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%; background: var(--bg4);
+    font-size: 11px; font-weight: 700; margin-right: 8px; color: var(--fg2); vertical-align: middle;
+  }
+  .mono { font-family: var(--mono); font-size: 12px; color: var(--fg2); }
+
+  .badge { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .badge.pass { background: var(--green-bg); color: var(--green); }
+  .badge.fail { background: var(--red-bg); color: var(--red); }
+
+  .note {
+    font-size: 12px; color: var(--fg3); margin-top: 10px; padding: 10px 14px;
+    background: var(--bg); border-radius: var(--radius-sm);
+    border: 1px dashed var(--bg4); line-height: 1.6;
+  }
+
+  .section-title {
+    font-size: 18px; font-weight: 700; margin: 1.5rem 0 0.75rem;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before {
+    content: ''; display: block; width: 3px; height: 18px; background: var(--accent); border-radius: 2px;
+  }
+  .section-title.teal::before { background: var(--teal); }
+
+  .formula-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 10px 14px; background: var(--bg); border-radius: var(--radius-sm);
+    font-family: var(--mono); font-size: 13px; color: var(--fg2);
+    margin: 8px 0; border: 1px solid var(--bg4);
+  }
+  .formula-bar .sym { color: var(--accent); font-weight: 500; }
+  .formula-bar .sym.teal { color: var(--teal); }
+  .formula-bar .op { color: var(--fg3); }
+
+  /* ── Merkle tree SVG ── */
+  .tree-wrap { overflow-x: auto; margin: 12px 0; }
+  .tree-wrap svg { display: block; margin: 0 auto; }
+  .tree-wrap svg text { font-family: var(--mono); }
+
+  /* ── Vector display ── */
+  .vec-display {
+    display: flex; gap: 3px; flex-wrap: wrap; margin: 4px 0;
+    font-family: var(--mono); font-size: 11px;
+  }
+  .vec-entry {
+    padding: 2px 5px; border-radius: 3px; background: var(--bg4); color: var(--fg2);
+    min-width: 28px; text-align: center;
+  }
+  .vec-entry.hl { background: rgba(45,212,191,0.15); color: var(--teal); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>Cryptographic <span>Accumulators</span></h1>
+  <p class="subtitle">Interactive comparison of RSA and lattice-based constructions</p>
+
+  <div class="scheme-bar">
+    <button class="scheme-btn active" onclick="switchScheme('rsa')">
+      RSA Accumulator<span class="tag" style="background:var(--accent2);color:#fff">mod exp</span>
+    </button>
+    <button class="scheme-btn" onclick="switchScheme('lattice')">
+      Lattice Accumulator<span class="tag" style="background:var(--teal-bg);color:var(--teal)">SIS hash</span>
+    </button>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- RSA PANEL                                                          -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <div id="panel-rsa">
+    <div class="grid">
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--accent)"></span> Public parameters</div>
+        <div class="param-row"><span class="param-key">N</span><span class="param-val" id="r-param-n"></span></div>
+        <div class="param-row"><span class="param-key">g</span><span class="param-val" id="r-param-g"></span></div>
+        <div class="note">N = p × q (trusted setup) · g ∈ Z*_N</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--green)"></span> Element set</div>
+        <p style="font-size:13px;color:var(--fg3);margin-bottom:10px;">Toggle elements in / out:</p>
+        <div class="elem-grid" id="r-chips"></div>
+        <div style="font-size:12px;color:var(--fg3);" id="r-count"></div>
+      </div>
+    </div>
+
+    <div class="section-title">Prime representatives</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-label"><span class="dot" style="background:var(--amber)"></span> hash-to-prime</div>
+      <div class="formula-bar"><span class="sym">e</span><span class="op">=</span>HashToPrime(element)<span class="op">→</span>deterministic prime</div>
+      <table class="mapping-table" id="r-prime-table"><thead><tr><th>Element</th><th>Prime representative</th><th>Status</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="section-title">Accumulator value</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="formula-bar"><span class="sym">acc</span><span class="op">=</span><span class="sym">g</span>^(<span class="sym">e₁ × e₂ × … × eₖ</span>)<span class="op">mod</span><span class="sym">N</span></div>
+      <div class="flow" id="r-acc-flow"></div>
+      <div class="acc-display" id="r-acc-val"></div>
+    </div>
+
+    <div class="section-title">Proof explorer</div>
+    <div class="card">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="rTab('mem')">Membership</button>
+        <button class="tab-btn" onclick="rTab('non')">Non-membership</button>
+      </div>
+      <div id="r-tab-mem">
+        <p style="font-size:13px;color:var(--fg3);margin-bottom:10px;">Select an accumulated element:</p>
+        <div class="proof-select" id="r-mem-sel"></div><div id="r-mem-proof"></div>
+      </div>
+      <div id="r-tab-non" style="display:none;">
+        <p style="font-size:13px;color:var(--fg3);margin-bottom:10px;">Select a non-member:</p>
+        <div class="proof-select" id="r-non-sel"></div><div id="r-non-proof"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <!-- LATTICE PANEL                                                      -->
+  <!-- ════════════════════════════════════════════════════════════════════ -->
+  <div id="panel-lattice" style="display:none;">
+    <div class="grid">
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--teal)"></span> SIS parameters</div>
+        <div class="param-row"><span class="param-key">n</span><span class="param-val" id="l-param-n"></span></div>
+        <div class="param-row"><span class="param-key">q</span><span class="param-val" id="l-param-q"></span></div>
+        <div class="param-row"><span class="param-key">log q</span><span class="param-val" id="l-param-logq"></span></div>
+        <div class="param-row"><span class="param-key">m</span><span class="param-val" id="l-param-m"></span></div>
+        <div class="note">A ∈ Z_q^{n×m} — random public matrix<br>
+          h_A(x) = A·x mod q &nbsp;(SIS hash, post-quantum)</div>
+      </div>
+      <div class="card">
+        <div class="card-label"><span class="dot" style="background:var(--green)"></span> Element set</div>
+        <p style="font-size:13px;color:var(--fg3);margin-bottom:10px;">Toggle elements (sorted Merkle tree):</p>
+        <div class="elem-grid" id="l-chips"></div>
+        <div style="font-size:12px;color:var(--fg3);" id="l-count"></div>
+      </div>
+    </div>
+
+    <div class="section-title teal">Leaf hashes — A<sub>leaf</sub> · SHA-256(elem) mod q</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="card-label"><span class="dot" style="background:var(--coral)"></span> element → Z_q^n</div>
+      <table class="mapping-table" id="l-leaf-table"><thead><tr><th>Element</th><th>Leaf hash vector (first 8 entries)</th><th>Status</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="section-title teal">Merkle tree (SIS hash)</div>
+    <div class="card" style="margin-bottom:1rem;">
+      <div class="formula-bar">
+        <span>parent</span><span class="op">=</span>
+        <span class="sym teal">A</span><span class="op">·</span>
+        <span>[bitdecomp(left) ‖ bitdecomp(right)]</span>
+        <span class="op">mod</span><span class="sym teal">q</span>
+      </div>
+      <div class="tree-wrap" id="l-tree-svg"></div>
+      <div class="acc-display teal" id="l-acc-val"></div>
+    </div>
+
+    <div class="section-title teal">Proof explorer</div>
+    <div class="card">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="lTab('mem')">Membership</button>
+        <button class="tab-btn" onclick="lTab('non')">Non-membership</button>
+      </div>
+      <div id="l-tab-mem">
+        <p style="font-size:13px;color:var(--fg3);margin-bottom:10px;">Select an accumulated element:</p>
+        <div class="proof-select" id="l-mem-sel"></div><div id="l-mem-proof"></div>
+      </div>
+      <div id="l-tab-non" style="display:none;">
+        <p style="font-size:13px;color:var(--fg3);margin-bottom:10px;">Select a non-member:</p>
+        <div class="proof-select" id="l-non-sel"></div><div id="l-non-proof"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// SHARED
+// ═══════════════════════════════════════════════════════════════
+const ALL = ['alice','bob','charlie','dave','eve','frank','grace','heidi'];
+
+function switchScheme(s) {
+  document.getElementById('panel-rsa').style.display = s==='rsa'?'':'none';
+  document.getElementById('panel-lattice').style.display = s==='lattice'?'':'none';
+  document.querySelectorAll('.scheme-btn').forEach((b,i) => b.classList.toggle('active', s==='rsa'?i===0:i===1));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RSA ACCUMULATOR (BigInt)
+// ═══════════════════════════════════════════════════════════════
+const RP = 104729n, RQ = 104743n, RN = RP*RQ, RG = 65537n;
+const RPRIMES = {};
+function rHashStr(s) { let h=5381n; for(let i=0;i<s.length;i++) h=((h<<5n)+h)+BigInt(s.charCodeAt(i)); return h<0n?-h:h; }
+function rIsPrime(n) { if(n<2n)return false;if(n<4n)return true;if(n%2n===0n||n%3n===0n)return false;for(let i=5n;i*i<=n;i+=6n){if(n%i===0n||n%(i+2n)===0n)return false;}return true; }
+function rH2P(s) { let h=rHashStr(s)%100000n+100003n; if(h%2n===0n)h++;while(!rIsPrime(h))h+=2n;return h; }
+ALL.forEach(e => RPRIMES[e]=rH2P(e));
+
+function rModpow(b,e,m) { b=((b%m)+m)%m;if(e<0n){b=rModinv(b,m);e=-e;} let r=1n;while(e>0n){if(e&1n)r=r*b%m;b=b*b%m;e>>=1n;}return r; }
+function rExtgcd(a,b) { if(a===0n)return[b,0n,1n];const[g,x,y]=rExtgcd(((b%a)+a)%a,a);return[g,y-(b/a)*x,x]; }
+function rModinv(a,m) { const[g,x]=rExtgcd(((a%m)+m)%m,m);return((x%m)+m)%m; }
+function shortB(n,l) { l=l||28;let s=n.toString();if(s.length<=l)return s;return s.slice(0,l/2|0)+'···'+s.slice(-(l/2|0)); }
+
+let rSet = new Set(['alice','bob','charlie','dave']), rSelM=null, rSelN=null;
+function rProduct(ex) { let p=1n;for(const e of rSet)if(e!==ex)p*=RPRIMES[e];return p; }
+function rAcc() { return rModpow(RG,rProduct(),RN); }
+
+function rRender() {
+  document.getElementById('r-param-n').textContent=RN+' ('+RP+' × '+RQ+')';
+  document.getElementById('r-param-g').textContent=RG.toString();
+  document.getElementById('r-chips').innerHTML=ALL.map(e=>`<div class="elem-chip ${rSet.has(e)?'in':''}" onclick="rToggle('${e}')">${e}</div>`).join('');
+  document.getElementById('r-count').textContent=rSet.size+' element'+(rSet.size!==1?'s':'')+' accumulated';
+
+  const tb=document.querySelector('#r-prime-table tbody');
+  tb.innerHTML=ALL.map(e=>{const i=rSet.has(e);return`<tr class="${i?'highlight':''}"><td>${e}</td><td>${RPRIMES[e]}</td><td>${i?'<span style="color:var(--green);font-size:12px;font-weight:600">● in</span>':'<span style="color:var(--fg3);font-size:12px">○ out</span>'}</td></tr>`;}).join('');
+
+  const sorted=[...rSet].sort(), fl=document.getElementById('r-acc-flow');
+  let fh=`<span class="flow-box hl">g</span>`;
+  sorted.forEach(e=>{fh+=`<span class="flow-op">^</span><span class="flow-box">e<sub>${e}</sub></span>`;});
+  fh+=`<span class="flow-op">mod N =</span><span class="flow-box gr">acc</span>`;
+  fl.innerHTML=fh;
+  const a=rSet.size>0?rAcc():RG;
+  document.getElementById('r-acc-val').innerHTML=`<strong style="color:var(--green)">acc</strong> = `+a;
+
+  document.getElementById('r-mem-sel').innerHTML=sorted.map(e=>`<div class="proof-chip ${rSelM===e?'active':''}" onclick="rPickM('${e}')">${e}</div>`).join('');
+  document.getElementById('r-non-sel').innerHTML=ALL.filter(e=>!rSet.has(e)).map(e=>`<div class="proof-chip ${rSelN===e?'active':''}" onclick="rPickN('${e}')">${e}</div>`).join('');
+  rRenderMem(); rRenderNon();
+}
+
+function rRenderMem() {
+  const el=document.getElementById('r-mem-proof');
+  if(!rSelM||!rSet.has(rSelM)){el.innerHTML='';return;}
+  const e=rSelM, ep=RPRIMES[e], w=rModpow(RG,rProduct(e),RN), a=rAcc(), c=rModpow(w,ep,RN), v=c===a;
+  el.innerHTML=`<div class="proof-card"><div class="proof-title">Membership proof: "${e}" ${v?'<span class="badge pass">valid</span>':'<span class="badge fail">invalid</span>'}</div>
+    <div class="step ok"><span class="step-num">1</span><strong>Witness</strong><br><span class="mono">w = g^(∏ e_j, j≠${e}) mod N</span><br><span class="mono" style="color:var(--accent)">w = ${w}</span></div>
+    <div class="step ok"><span class="step-num">2</span><strong>Verify w<sup>e</sup> mod N ≟ acc</strong><br><span class="mono" style="color:var(--green)">= ${c}</span><br><span class="mono">acc = ${a}</span></div>
+    <div class="flow"><span class="flow-box">w</span><span class="flow-op">^</span><span class="flow-box">e<sub>${e}</sub></span><span class="flow-op">mod N =</span><span class="flow-box gr">acc</span><span class="flow-op">→</span><span class="badge ${v?'pass':'fail'}">${v?'✓':'✗'}</span></div>
+    <div class="note">The witness is the accumulator with ${e}'s prime factored out. Raising w to e_${e} reconstructs acc.</div></div>`;
+}
+
+function rRenderNon() {
+  const el=document.getElementById('r-non-proof');
+  if(!rSelN||rSet.has(rSelN)||rSet.size===0){el.innerHTML='';return;}
+  const e=rSelN,ep=RPRIMES[e],prod=rProduct(),a2=rAcc(),[gcd,a,b]=rExtgcd(ep,prod);
+  const d=rModpow(RG,a,RN), lhs=(rModpow(d,ep,RN)*rModpow(a2,b,RN))%RN, gN=((RG%RN)+RN)%RN, v=lhs===gN;
+  el.innerHTML=`<div class="proof-card"><div class="proof-title">Non-membership proof: "${e}" ${v?'<span class="badge pass">valid</span>':'<span class="badge fail">invalid</span>'}</div>
+    <div class="step ok"><span class="step-num">1</span><strong>Bézout identity</strong><br><span class="mono">gcd(e_${e}, ∏e_j) = ${gcd}</span><br><span class="mono">a·e_${e} + b·∏e_j = 1</span><br><span class="mono" style="color:var(--amber)">a = ${shortB(a,36)}</span><br><span class="mono" style="color:var(--amber)">b = ${shortB(b,36)}</span></div>
+    <div class="step ok"><span class="step-num">2</span><strong>Proof value</strong><br><span class="mono">d = g<sup>a</sup> mod N = <span style="color:var(--accent)">${d}</span></span></div>
+    <div class="step ${v?'ok':''}"><span class="step-num">3</span><strong>Verify d<sup>e</sup> · acc<sup>b</sup> mod N ≟ g</strong><br><span class="mono" style="color:${v?'var(--green)':'var(--red)'}">= ${lhs}</span><br><span class="mono">g = ${gN}</span></div>
+    <div class="flow"><span class="flow-box">d<sup>e</sup></span><span class="flow-op">×</span><span class="flow-box">acc<sup>b</sup></span><span class="flow-op">mod N =</span><span class="flow-box hl">g</span><span class="flow-op">→</span><span class="badge ${v?'pass':'fail'}">${v?'✓':'✗'}</span></div>
+    <div class="note">g^(a·e + b·u) = g^1 = g. Splitting: d^e · acc^b = g. Only possible when e shares no factor with the product.</div></div>`;
+}
+
+function rToggle(e){if(rSet.has(e)){if(rSet.size>1)rSet.delete(e);}else rSet.add(e);if(rSelM&&!rSet.has(rSelM))rSelM=null;if(rSelN&&rSet.has(rSelN))rSelN=null;rRender();}
+function rPickM(e){rSelM=e;rRender();} function rPickN(e){rSelN=e;rRender();}
+function rTab(t){document.querySelectorAll('#panel-rsa .tab-btn').forEach((b,i)=>b.classList.toggle('active',t==='mem'?i===0:i===1));document.getElementById('r-tab-mem').style.display=t==='mem'?'':'none';document.getElementById('r-tab-non').style.display=t==='non'?'':'none';}
+
+// ═══════════════════════════════════════════════════════════════
+// LATTICE ACCUMULATOR (toy SIS-hash Merkle tree)
+// ═══════════════════════════════════════════════════════════════
+const LN=8, LQ=251, LLOGQ=8, LM=2*LN*LLOGQ;
+// deterministic "random" matrix (seeded LCG)
+function lcg(seed){return()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed;};}
+const rng1=lcg(42);
+const A_LEAF=Array.from({length:LN},()=>Array.from({length:32},()=>rng1()%LQ)); // n×32
+const rng2=lcg(137);
+const A_PAIR=Array.from({length:LN},()=>Array.from({length:LM},()=>rng2()%LQ)); // n×m
+
+function sha256simple(s) {
+  // deterministic 32-byte mock hash using simple mixing
+  const out=new Array(32).fill(0);
+  for(let i=0;i<s.length;i++) for(let j=0;j<32;j++) out[j]=(out[j]*31+s.charCodeAt(i)+j*7)&0xff;
+  // extra mixing rounds
+  for(let r=0;r<4;r++) for(let j=0;j<32;j++) out[j]=(out[j]*17+out[(j+1)%32]+r*13)&0xff;
+  return out;
+}
+
+function toBits(byteArr) { const b=[];byteArr.forEach(v=>{for(let i=7;i>=0;i--)b.push((v>>i)&1);});return b; }
+
+function bitDecomp(vec) {
+  const b=[];
+  vec.forEach(v=>{for(let i=0;i<LLOGQ;i++)b.push((v>>i)&1);});
+  return b;
+}
+
+function matVecMod(mat,vec,q) {
+  return mat.map(row=>{let s=0;for(let j=0;j<row.length&&j<vec.length;j++)s+=row[j]*vec[j];return((s%q)+q)%q;});
+}
+
+function leafHash(elem) {
+  const bits=toBits(sha256simple(elem)).slice(0,256);
+  // pad/truncate to 32 (A_LEAF columns)
+  const inp=bits.slice(0,32);
+  return matVecMod(A_LEAF,inp,LQ);
+}
+
+function pairHash(left,right) {
+  const x=[...bitDecomp(left),...bitDecomp(right)];
+  return matVecMod(A_PAIR,x,LQ);
+}
+
+function vecEq(a,b) { if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true; }
+function vecStr(v,n) { n=n||8;return'['+v.slice(0,n).join(', ')+(v.length>n?', …':'')+']'; }
+function vecShort(v) { return v.slice(0,4).join(',')+'…'; }
+
+let lSet=new Set(['alice','bob','charlie','dave']), lSelM=null, lSelN=null;
+let lLeaves=[], lLayers=[], lSorted=[], lTreeSize=0;
+
+function lBuildTree() {
+  lSorted=[...lSet].sort();
+  lLeaves=lSorted.map(e=>leafHash(e));
+  const n=lLeaves.length;
+  if(n===0){lLayers=[];return;}
+  let sz=1;while(sz<n)sz<<=1;
+  lTreeSize=sz;
+  const zero=new Array(LN).fill(0);
+  let layer=[...lLeaves];while(layer.length<sz)layer.push([...zero]);
+  lLayers=[layer];
+  let cur=layer;
+  while(cur.length>1){
+    const nxt=[];
+    for(let i=0;i<cur.length;i+=2) nxt.push(pairHash(cur[i],cur[i+1]));
+    lLayers.push(nxt);cur=nxt;
+  }
+}
+
+function lRoot(){return lLayers.length?lLayers[lLayers.length-1][0]:new Array(LN).fill(0);}
+
+function lAuthPath(idx) {
+  const path=[];
+  let cur=idx;
+  for(let lvl=0;lvl<lLayers.length-1;lvl++){
+    const sib=cur^1;
+    const sibHash=sib<lLayers[lvl].length?lLayers[lvl][sib]:new Array(LN).fill(0);
+    path.push({sibling:sibHash, isRight:!!(cur&1), sibIdx:sib});
+    cur>>=1;
+  }
+  return path;
+}
+
+function lVerifyPath(elem,path,root) {
+  let cur=leafHash(elem);
+  for(const step of path){
+    cur=step.isRight?pairHash(step.sibling,cur):pairHash(cur,step.sibling);
+  }
+  return vecEq(cur,root);
+}
+
+// ── Tree SVG rendering ──
+function lRenderTree(highlightIdx, highlightPath) {
+  if(!lLayers.length){return '<p style="color:var(--fg3);font-size:13px;">Add elements to see the tree.</p>';}
+  const depth=lLayers.length;
+  const nodeW=64, nodeH=32, gapX=8, gapY=52;
+  const bottomW=lTreeSize*(nodeW+gapX)-gapX;
+  const svgW=Math.max(bottomW+40,400);
+  const svgH=depth*(nodeH+gapY)+20;
+
+  let svg=`<svg width="${Math.min(svgW,900)}" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg">`;
+
+  const positions=[];
+  for(let lvl=0;lvl<depth;lvl++){
+    const count=lLayers[lvl].length;
+    const layerW=count*(nodeW+gapX)-gapX;
+    const x0=(svgW-layerW)/2;
+    const y=svgH-20-(lvl)*(nodeH+gapY)-nodeH;
+    const row=[];
+    for(let i=0;i<count;i++){
+      row.push({x:x0+i*(nodeW+gapX), y, w:nodeW, h:nodeH});
+    }
+    positions.push(row);
+  }
+
+  // edges
+  for(let lvl=1;lvl<depth;lvl++){
+    for(let i=0;i<positions[lvl].length;i++){
+      const p=positions[lvl][i];
+      const c1=positions[lvl-1][i*2], c2=positions[lvl-1][i*2+1];
+      if(c1) svg+=`<line x1="${p.x+p.w/2}" y1="${p.y+p.h}" x2="${c1.x+c1.w/2}" y2="${c1.y}" stroke="${'#2a2f3e'}" stroke-width="1.5"/>`;
+      if(c2) svg+=`<line x1="${p.x+p.w/2}" y1="${p.y+p.h}" x2="${c2.x+c2.w/2}" y2="${c2.y}" stroke="${'#2a2f3e'}" stroke-width="1.5"/>`;
+    }
+  }
+
+  // highlight path edges
+  if(highlightPath && highlightIdx!==null){
+    let cur=highlightIdx;
+    for(let lvl=0;lvl<depth-1;lvl++){
+      const parent=cur>>1;
+      const cp=positions[lvl][cur], pp=positions[lvl+1][parent];
+      if(cp&&pp) svg+=`<line x1="${pp.x+pp.w/2}" y1="${pp.y+pp.h}" x2="${cp.x+cp.w/2}" y2="${cp.y}" stroke="var(--teal)" stroke-width="2.5"/>`;
+      // sibling highlight
+      const sib=cur^1;
+      const sp=positions[lvl][sib];
+      if(sp) svg+=`<line x1="${pp.x+pp.w/2}" y1="${pp.y+pp.h}" x2="${sp.x+sp.w/2}" y2="${sp.y}" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="4 3"/>`;
+      cur=parent;
+    }
+  }
+
+  // nodes
+  for(let lvl=0;lvl<depth;lvl++){
+    for(let i=0;i<lLayers[lvl].length;i++){
+      const pos=positions[lvl][i];
+      const vec=lLayers[lvl][i];
+      const isLeaf=lvl===0;
+      const isRoot=lvl===depth-1;
+      const isPadding=isLeaf && i>=lSorted.length;
+
+      let fill='#1a1e28', stroke='#2a2f3e', textCol='#9ba0b0';
+      if(isRoot){fill='#122a28';stroke='#2dd4bf';textCol='#2dd4bf';}
+      else if(highlightIdx!==null && isLeaf && i===highlightIdx){fill='rgba(45,212,191,0.15)';stroke='#2dd4bf';textCol='#2dd4bf';}
+      else if(isPadding){fill='#0c0e13';stroke='#1a1e28';textCol='#3a3f4e';}
+
+      // check if this is a sibling in the path
+      if(highlightPath){
+        let cur2=highlightIdx;
+        for(let l2=0;l2<depth-1;l2++){
+          const sib2=cur2^1;
+          if(l2===lvl&&i===sib2){fill='rgba(240,176,64,0.1)';stroke='#f0b040';textCol='#f0b040';}
+          cur2>>=1;
+        }
+      }
+
+      svg+=`<rect x="${pos.x}" y="${pos.y}" width="${pos.w}" height="${pos.h}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="1"/>`;
+      const label=isLeaf?(isPadding?'∅':(lSorted[i]||'').slice(0,5)):isRoot?'root':vecShort(vec);
+      svg+=`<text x="${pos.x+pos.w/2}" y="${pos.y+pos.h/2+1}" text-anchor="middle" dominant-baseline="central" fill="${textCol}" font-size="${isLeaf?'11':'10'}">${label}</text>`;
+    }
+  }
+
+  svg+='</svg>';
+  return svg;
+}
+
+function lRender() {
+  lBuildTree();
+  document.getElementById('l-param-n').textContent=LN+' (lattice dimension)';
+  document.getElementById('l-param-q').textContent=LQ+' (prime modulus)';
+  document.getElementById('l-param-logq').textContent=LLOGQ+' (bits per entry)';
+  document.getElementById('l-param-m').textContent=LM+' = 2·n·log_q (input dim for pair hash)';
+
+  document.getElementById('l-chips').innerHTML=ALL.map(e=>`<div class="elem-chip ${lSet.has(e)?'in':''}" onclick="lToggle('${e}')">${e}</div>`).join('');
+  document.getElementById('l-count').textContent=lSet.size+' element'+(lSet.size!==1?'s':'')+' accumulated (sorted)';
+
+  const tb=document.querySelector('#l-leaf-table tbody');
+  tb.innerHTML=ALL.map(e=>{const i=lSet.has(e);const v=leafHash(e);return`<tr class="${i?'highlight':''}"><td>${e}</td><td><div class="vec-display">${v.slice(0,8).map((x,j)=>`<span class="vec-entry${i?' hl':''}">${x}</span>`).join('')}<span class="vec-entry" style="background:none;color:var(--fg3)">…</span></div></td><td>${i?'<span style="color:var(--green);font-size:12px;font-weight:600">● in</span>':'<span style="color:var(--fg3);font-size:12px">○ out</span>'}</td></tr>`;}).join('');
+
+  document.getElementById('l-tree-svg').innerHTML=lRenderTree(null,false);
+  const root=lRoot();
+  document.getElementById('l-acc-val').innerHTML=`<strong style="color:var(--teal)">root</strong> = ${vecStr(root)}`;
+
+  document.getElementById('l-mem-sel').innerHTML=lSorted.map(e=>`<div class="proof-chip ${lSelM===e?'active':''}" onclick="lPickM('${e}')">${e}</div>`).join('');
+  document.getElementById('l-non-sel').innerHTML=ALL.filter(e=>!lSet.has(e)).map(e=>`<div class="proof-chip ${lSelN===e?'active':''}" onclick="lPickN('${e}')">${e}</div>`).join('');
+  lRenderMem(); lRenderNon();
+}
+
+function lRenderMem() {
+  const el=document.getElementById('l-mem-proof');
+  if(!lSelM||!lSet.has(lSelM)){el.innerHTML='';return;}
+  const idx=lSorted.indexOf(lSelM);
+  const path=lAuthPath(idx);
+  const root=lRoot();
+  const valid=lVerifyPath(lSelM,path,root);
+
+  // re-render tree with highlight
+  document.getElementById('l-tree-svg').innerHTML=lRenderTree(idx,true);
+
+  let pathHtml='';
+  path.forEach((step,i)=>{
+    pathHtml+=`<div class="step teal"><span class="step-num">${i+1}</span>
+      <strong>Level ${i}: sibling at index ${step.sibIdx}</strong> (${step.isRight?'current is right child':'current is left child'})<br>
+      <span class="mono" style="color:var(--amber)">sibling = ${vecStr(step.sibling,6)}</span><br>
+      <span class="mono">parent = A · [bitdecomp(${step.isRight?'sib':'cur'}) ‖ bitdecomp(${step.isRight?'cur':'sib'})] mod q</span>
+    </div>`;
+  });
+
+  el.innerHTML=`<div class="proof-card"><div class="proof-title">Membership proof: "${lSelM}" ${valid?'<span class="badge pass">valid</span>':'<span class="badge fail">invalid</span>'}</div>
+    <div class="step teal"><span class="step-num">0</span><strong>Leaf hash</strong><br><span class="mono" style="color:var(--teal)">${vecStr(leafHash(lSelM))}</span></div>
+    ${pathHtml}
+    <div class="flow">
+      <span class="flow-box tl">leaf</span>
+      ${path.map((_,i)=>`<span class="flow-op">→</span><span class="flow-box">L${i+1}</span>`).join('')}
+      <span class="flow-op">=</span><span class="flow-box tl">root</span>
+      <span class="flow-op">→</span><span class="badge ${valid?'pass':'fail'}">${valid?'✓ match':'✗ mismatch'}</span>
+    </div>
+    <div class="note">
+      <span style="display:inline-block;width:10px;height:10px;background:var(--teal);border-radius:2px;vertical-align:middle;margin-right:4px;"></span> = authentication path &nbsp;
+      <span style="display:inline-block;width:10px;height:10px;background:var(--amber);border-radius:2px;vertical-align:middle;margin-right:4px;"></span> = sibling nodes (proof data)<br>
+      The verifier re-hashes from the leaf to the root using the sibling hashes. A match with the accumulator proves membership. Proof size = O(log n).
+    </div></div>`;
+}
+
+function lRenderNon() {
+  const el=document.getElementById('l-non-proof');
+  if(!lSelN||lSet.has(lSelN)){el.innerHTML='';return;}
+  if(lSet.size===0){el.innerHTML='<div class="note">Add elements first.</div>';return;}
+
+  const e=lSelN;
+  // find bracketing elements in sorted order
+  let pos=0;
+  for(let i=0;i<lSorted.length;i++){if(lSorted[i]<e)pos=i+1;}
+
+  let boundary, leftE, rightE, leftProof, rightProof;
+  if(pos===0){
+    boundary='left';rightE=lSorted[0];rightProof=lAuthPath(0);
+  } else if(pos>=lSorted.length){
+    boundary='right';leftE=lSorted[lSorted.length-1];leftProof=lAuthPath(lSorted.length-1);
+  } else {
+    boundary='between';
+    leftE=lSorted[pos-1];rightE=lSorted[pos];
+    leftProof=lAuthPath(pos-1);rightProof=lAuthPath(pos);
+  }
+
+  const root=lRoot();
+  let valid=true;
+  if(leftProof) valid=valid&&lVerifyPath(leftE,leftProof,root);
+  if(rightProof) valid=valid&&lVerifyPath(rightE,rightProof,root);
+
+  let stepsHtml=`<div class="step teal"><span class="step-num">1</span><strong>Locate neighbours in sorted tree</strong><br>`;
+  if(boundary==='left') stepsHtml+=`<span class="mono">"${e}" &lt; "${rightE}" (first leaf) → element comes before all leaves</span>`;
+  else if(boundary==='right') stepsHtml+=`<span class="mono">"${leftE}" (last leaf) &lt; "${e}" → element comes after all leaves</span>`;
+  else stepsHtml+=`<span class="mono">"${leftE}" &lt; "${e}" &lt; "${rightE}" → element falls between adjacent leaves</span>`;
+  stepsHtml+=`</div>`;
+
+  if(leftProof) stepsHtml+=`<div class="step teal"><span class="step-num">2</span><strong>Verify "${leftE}" is a member</strong><br><span class="mono">Auth path length: ${leftProof.length} → <span style="color:var(--green)">✓ valid</span></span></div>`;
+  if(rightProof) stepsHtml+=`<div class="step teal"><span class="step-num">${leftProof?3:2}</span><strong>Verify "${rightE}" is a member</strong><br><span class="mono">Auth path length: ${rightProof.length} → <span style="color:var(--green)">✓ valid</span></span></div>`;
+
+  stepsHtml+=`<div class="step ${valid?'teal':''}"><span class="step-num">${(leftProof?1:0)+(rightProof?1:0)+2}</span><strong>Adjacency + ordering check</strong><br><span class="mono">Neighbours are adjacent in sorted tree and bracket "${e}" → <span style="color:${valid?'var(--green)':'var(--red)'}">${valid?'✓':'✗'}</span></span></div>`;
+
+  el.innerHTML=`<div class="proof-card"><div class="proof-title">Non-membership proof: "${e}" ${valid?'<span class="badge pass">valid</span>':'<span class="badge fail">invalid</span>'}</div>
+    ${stepsHtml}
+    <div class="flow">
+      ${leftE?`<span class="flow-box">${leftE}</span><span class="flow-op">&lt;</span>`:''}
+      <span class="flow-box" style="border-color:var(--red);color:var(--red)">${e}</span>
+      ${rightE?`<span class="flow-op">&lt;</span><span class="flow-box">${rightE}</span>`:''}
+      <span class="flow-op">→</span>
+      <span class="badge ${valid?'pass':'fail'}">${valid?'✓ absent':'✗'}</span>
+    </div>
+    <div class="note">
+      Since the Merkle tree stores elements in sorted order, proving two adjacent leaves bracket the target (with no room for it between them) proves non-membership. Both neighbours' membership is verified via standard auth paths. Proof size = O(log n).
+    </div></div>`;
+}
+
+function lToggle(e){if(lSet.has(e)){if(lSet.size>1)lSet.delete(e);}else lSet.add(e);if(lSelM&&!lSet.has(lSelM))lSelM=null;if(lSelN&&lSet.has(lSelN))lSelN=null;lRender();}
+function lPickM(e){lSelM=e;lRender();} function lPickN(e){lSelN=e;lRender();}
+function lTab(t){document.querySelectorAll('#panel-lattice .tab-btn').forEach((b,i)=>b.classList.toggle('active',t==='mem'?i===0:i===1));document.getElementById('l-tab-mem').style.display=t==='mem'?'':'none';document.getElementById('l-tab-non').style.display=t==='non'?'':'none';}
+
+// ── Init ──
+rRender();
+lRender();
+</script>
+</body>
+</html>
