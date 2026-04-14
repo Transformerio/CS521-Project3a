@@ -1,7 +1,7 @@
 from py_ecc.optimized_bls12_381 import G1, G2, add, multiply, pairing, curve_order
 from dataclasses import dataclass
 from typing import Iterable, List, Sequence, Tuple
-
+import hashlib
 g1 = G1
 g2 = G2
 
@@ -24,7 +24,9 @@ def build_characteristic_polynomial(elements: list[int]) -> list[int]:
     # Build: P(z) = ∏ (z + x)
     poly = [1]
     for x in elements:
-        poly = poly_mul(poly, [mod(x), 1])  # (x + z)
+        fx = to_field_element(x)
+        poly = poly_mul(poly, [fx, 1])
+
     return trim(poly)
 
 def poly_div_by_linear(poly: list[int], c: int) -> tuple[list[int], int]:
@@ -74,6 +76,19 @@ def eval_poly_in_exponent_g1(coeffs: list[int], g1_powers_of_s: list[tuple]) -> 
         return multiply(G1, 0)  # point at infinity
 
     return acc
+
+def to_field_element(x) -> int:
+    """
+    Convert supported Python values into a field element.
+    """
+    if isinstance(x, int):
+        return x % curve_order
+
+    if isinstance(x, str):
+        digest = hashlib.sha256(x.encode("utf-8")).digest()
+        return int.from_bytes(digest, "big") % curve_order
+
+    raise TypeError(f"Unsupported element type: {type(x)}")
 class MiniBLSAccumulator:
     def __init__(self, max_set_size: int, secret_s: int = 5):
         """
@@ -106,7 +121,7 @@ class MiniBLSAccumulator:
         P(z) = ∏ (z + x) = polynomial
         Acc = g1^(P(s)) = accumulator_point
         """
-        elems = sorted(set(elements))
+        elems = list(dict.fromkeys(elements))  # preserve order, remove duplicates
         if len(elems) > self.max_set_size:
             raise ValueError("Too many elements for this setup")
 
@@ -119,10 +134,11 @@ class MiniBLSAccumulator:
         If x is in the set then P(z) = (z + x)Q(z)
         witness W = g1^(Q(s))
         """
-        quotient, remainder = poly_div_by_linear(poly, mod(-x))
+        fx = to_field_element(x)
+        quotient, remainder = poly_div_by_linear(poly, mod(-fx))
 
         if remainder != 0:
-            raise ValueError(f"{x} is not a member; remainder was nonzero")
+            raise ValueError(f"{x!r} is not a member; remainder was nonzero")
 
         witness = eval_poly_in_exponent_g1(quotient, self.g1_powers_of_s)
         return witness
@@ -132,7 +148,8 @@ class MiniBLSAccumulator:
         Verify that e(g2^(s+x), witness) == e(g2, acc)
         Because of P(s) = (s + x)Q(s)
         """
-        g2_s_plus_x = add(self.g2_s, multiply(self.g2, mod(x)))
+        fx = to_field_element(x)
+        g2_s_plus_x = add(self.g2_s, multiply(self.g2, mod(fx)))
 
         left = pairing(g2_s_plus_x, witness, final_exponentiate=True)
         right = pairing(self.g2, acc, final_exponentiate=True)
@@ -141,7 +158,7 @@ class MiniBLSAccumulator:
 def main():
     bls = MiniBLSAccumulator(max_set_size=10, secret_s=5)
 
-    S = [1, 4, 9, 100]
+    S = ["a", 4, 9, 100]
     poly, acc = bls.accumulate(S)
 
     print("Set S =", S)
