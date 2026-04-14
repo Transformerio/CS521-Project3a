@@ -1,4 +1,172 @@
-from py_ecc.bls12_381 import G1, G2, multiply, pairing
+from py_ecc.optimized_bls12_381 import G1, G2, add, multiply, pairing, curve_order
+from dataclasses import dataclass
+from typing import Iterable, List, Sequence, Tuple
 
-g1 = G1.generator
-g2 = G2.generator
+g1 = G1
+g2 = G2
+
+def mod(x: int) -> int:
+    return x % curve_order
+
+def trim(poly: list[int]) -> list[int]:
+    while len(poly) > 1 and poly[-1] == 0:
+        poly.pop()
+    return poly
+
+def poly_mul(a: list[int], b: list[int]) -> list[int]:
+    out = [0] * (len(a) + len(b) - 1)
+    for i, av in enumerate(a):
+        for j, bv in enumerate(b):
+            out[i + j] = mod(out[i + j] + av * bv)
+    return trim(out)
+
+def build_characteristic_polynomial(elements: list[int]) -> list[int]:
+    # Build: P(z) = ∏ (z + x)
+    poly = [1]
+    for x in elements:
+        poly = poly_mul(poly, [mod(x), 1])  # (x + z)
+    return trim(poly)
+
+def poly_div_by_linear(poly: list[int], c: int) -> tuple[list[int], int]:
+    """
+    Divide poly(z) by (z - c) using synthetic division.
+
+    To divide by (z + x), use c = -x mod curve_order.
+    Returns:
+        (quotient, remainder)
+    """
+    poly = trim(poly[:])
+
+    if len(poly) == 1:
+        return [0], poly[0]
+
+    # Reverse to descending order for synthetic division
+    desc = list(reversed(poly))
+    b = [desc[0]]
+
+    for i in range(1, len(desc)):
+        b.append(mod(desc[i] + b[-1] * c))
+
+    remainder = b[-1]
+    quotient_desc = b[:-1]
+    quotient = list(reversed(quotient_desc))
+    return trim(quotient), remainder
+
+def eval_poly_in_exponent_g1(coeffs: list[int], g1_powers_of_s: list[tuple]) -> tuple:
+    """
+    coeffs = [c0, c1, c2, ...]
+    srs points = [g1^(s^0), g1^(s^1), g1^(s^2), ...]
+    
+    result -> g1^(c0 + c1*s + c2*s^2 + ...)
+    """
+    if len(coeffs) > len(g1_powers_of_s):
+        raise ValueError("Polynomial degree exceeds setup capacity")
+
+    acc = None
+    for i, coeff in enumerate(coeffs):
+        coeff = mod(coeff)
+        if coeff == 0:
+            continue
+        term = multiply(g1_powers_of_s[i], coeff)
+        acc = term if acc is None else add(acc, term)
+
+    if acc is None:
+        return multiply(G1, 0)  # point at infinity
+
+    return acc
+class MiniBLSAccumulator:
+    def __init__(self, max_set_size: int, secret_s: int = 5):
+        """
+        Trusted setup with fixed secret_s by default for easier debugging.
+
+        Publishes:
+            g1^(1), g1^(s), g1^(s^2), ...
+            g2
+            g2^s
+        """
+        if max_set_size < 1:
+            raise ValueError("max_set_size must be >= 1")
+
+        self.max_set_size = max_set_size
+        self.s = mod(secret_s)
+
+        # Build SRS in G1: [g1^(s^0), g1^(s^1), ..., g1^(s^max_set_size)]
+        self.g1_powers_of_s = []
+        cur = 1
+        for _ in range(max_set_size + 1):
+            self.g1_powers_of_s.append(multiply(G1, cur))
+            cur = mod(cur * self.s)
+
+        self.g2 = G2
+        self.g2_s = multiply(G2, self.s)
+        
+
+    def accumulate(self, elements: list[int]) -> tuple[list[int], tuple]:
+        """
+        P(z) = ∏ (z + x) = polynomial
+        Acc = g1^(P(s)) = accumulator_point
+        """
+        elems = sorted(set(elements))
+        if len(elems) > self.max_set_size:
+            raise ValueError("Too many elements for this setup")
+
+        poly = build_characteristic_polynomial(elems)
+        acc = eval_poly_in_exponent_g1(poly, self.g1_powers_of_s)
+        return poly, acc
+
+    def prove_membership(self, poly: list[int], x: int) -> tuple:
+        """
+        If x is in the set then P(z) = (z + x)Q(z)
+        witness W = g1^(Q(s))
+        """
+        quotient, remainder = poly_div_by_linear(poly, mod(-x))
+
+        if remainder != 0:
+            raise ValueError(f"{x} is not a member; remainder was nonzero")
+
+        witness = eval_poly_in_exponent_g1(quotient, self.g1_powers_of_s)
+        return witness
+
+    def verify_membership(self, acc: tuple, x: int, witness: tuple) -> bool:
+        """
+        Verify that e(g2^(s+x), witness) == e(g2, acc)
+        Because of P(s) = (s + x)Q(s)
+        """
+        g2_s_plus_x = add(self.g2_s, multiply(self.g2, mod(x)))
+
+        left = pairing(g2_s_plus_x, witness, final_exponentiate=True)
+        right = pairing(self.g2, acc, final_exponentiate=True)
+        return left == right
+
+def main():
+    bls = MiniBLSAccumulator(max_set_size=10, secret_s=5)
+
+    S = [1, 4, 9, 100]
+    poly, acc = bls.accumulate(S)
+
+    print("Set S =", S)
+    print("Polynomial coefficients =", poly)
+
+    # Good membership tests
+    for x in S:
+        witness = bls.prove_membership(poly, x)
+        ok = bls.verify_membership(acc, x, witness)
+        print(f"membership({x}) =", ok)
+
+    # Bad membership test
+    try:
+        fake_witness = bls.prove_membership(poly, 4)
+        ok = bls.verify_membership(acc, 7, fake_witness)
+        print("membership(7) with witness for 4 =", ok)
+    except ValueError as e:
+        print("prove_membership(7) failed as expected:", e)
+
+    # Direct non-member proof attempt should fail
+    try:
+        bls.prove_membership(poly, 7)
+    except ValueError as e:
+        print("Non-member rejected correctly:", e)
+
+
+if __name__ == "__main__":
+    main()
