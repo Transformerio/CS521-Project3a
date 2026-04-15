@@ -5,6 +5,8 @@ import hashlib
 g1 = G1
 g2 = G2
 
+
+
 def mod(x: int) -> int:
     return x % curve_order
 
@@ -32,10 +34,7 @@ def build_characteristic_polynomial(elements: list[int]) -> list[int]:
 def poly_div_by_linear(poly: list[int], c: int) -> tuple[list[int], int]:
     """
     Divide poly(z) by (z - c) using synthetic division.
-
     To divide by (z + x), use c = -x mod curve_order.
-    Returns:
-        (quotient, remainder)
     """
     poly = trim(poly[:])
 
