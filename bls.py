@@ -155,35 +155,23 @@ class MiniBLSAccumulator:
         right = pairing(self.g2, acc, final_exponentiate=True)
         return left == right
 
-def main():
-    bls = MiniBLSAccumulator(max_set_size=10, secret_s=5)
 
-    S = ["a", 4, 9, 100]
-    poly, acc = bls.accumulate(S)
+bls = MiniBLSAccumulator(max_set_size=10, secret_s=5)
 
-    print("Set S =", S)
-    print("Polynomial coefficients =", poly)
+elems = ['a','b', 'c', 'd','e','f','g','h']
+poly, acc = bls.accumulate(elems)
 
-    # Good membership tests
-    for x in S:
-        witness = bls.prove_membership(poly, x)
-        ok = bls.verify_membership(acc, x, witness)
-        print(f"membership({x}) =", ok)
+print("Set elems =", elems)
+print("Polynomial coefficients =", poly)
 
-    # Bad membership test
-    try:
-        fake_witness = bls.prove_membership(poly, 4)
-        ok = bls.verify_membership(acc, 7, fake_witness)
-        print("membership(7) with witness for 4 =", ok)
-    except ValueError as e:
-        print("prove_membership(7) failed as expected:", e)
+target = 'a'
 
-    # Direct non-member proof attempt should fail
-    try:
-        bls.prove_membership(poly, 7)
-    except ValueError as e:
-        print("Non-member rejected correctly:", e)
+witness = bls.prove_membership(poly, target)
+ok = bls.verify_membership(acc, target, witness)
+print(f"membership({target}) =", ok)
 
-
-if __name__ == "__main__":
-    main()
+# Direct non-member proof attempt should fail
+try:
+    bls.prove_membership(poly, 7)
+except ValueError as e:
+    print("Non-member rejected correctly:", e)
