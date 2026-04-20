@@ -400,5 +400,5 @@ def main():
     print("  This is believed to hold even against quantum adversaries.")
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

@@ -1,9 +1,12 @@
 import mtree
 import bls
 import time
+import lattice
+import rsa
 
 elems = ['a','b', 'c', 'd','e','f','g','h']
 target = 'c'
+
 # Merkle Trees
 mt = mtree.Tree(elems)
 startMerkle = time.time()
@@ -26,6 +29,28 @@ startBLS = time.time()
 verify_bls = bls.verify_membership(acc, target, mpBLS)
 endBLS = time.time()
 print(f"[BLS] verify_BLS({target}) = {endBLS - startBLS} sec")
+
 # Lattice
+lattice = lattice.LatticeAccumulator(seed=0)
+lattice.accumulate(elems)
+startLattice = time.time()
+mpLattice = lattice.prove_membership(target)
+endLattice = time.time()
+print(f"[Lattice] get_membership_proof({target}) = {endLattice - startLattice} sec")
+startLattice = time.time()
+verify_Lattice = lattice.verify_membership(mpLattice)
+endLattice = time.time()
+print(f"[Lattice] verify_BLS({target}) = {endLattice - startLattice} sec")
+
 
 # RSA
+rsa = rsa.RSAAccumulator(bits=1024)
+rsa.batch_add(elems)
+startRSA = time.time()
+mpRSA = rsa.prove_membership(target)
+endRSA = time.time()
+print(f"[RSA] get_membership_proof({target}) = {endRSA - startRSA} sec")
+startRSA = time.time()
+verify_rsa = rsa.verify_membership(target, mpRSA)
+endRSA = time.time()
+print(f"[RSA] get_membership_proof({target}) = {endRSA - startRSA} sec")

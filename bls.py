@@ -31,10 +31,8 @@ def build_characteristic_polynomial(elements: list[int]) -> list[int]:
     return trim(poly)
 
 def poly_div_by_linear(poly: list[int], c: int) -> tuple[list[int], int]:
-    """
-    Divide poly(z) by (z - c) using synthetic division.
-    To divide by (z + x), use c = -x mod curve_order.
-    """
+    # Divide poly(z) by (z - c) using synthetic division
+    # To divide by (z + x), use c = -x mod curve_order
     poly = trim(poly[:])
 
     if len(poly) == 1:
@@ -53,12 +51,10 @@ def poly_div_by_linear(poly: list[int], c: int) -> tuple[list[int], int]:
     return trim(quotient), remainder
 
 def eval_poly_in_exponent_g1(coeffs: list[int], g1_powers_of_s: list[tuple]) -> tuple:
-    """
-    coeffs = [c0, c1, c2, ...]
-    srs points = [g1^(s^0), g1^(s^1), g1^(s^2), ...]
-    
-    result -> g1^(c0 + c1*s + c2*s^2 + ...)
-    """
+    # coeffs = [c0, c1, c2, ...]
+    # srs points = [g1^(s^0), g1^(s^1), g1^(s^2), ...]
+    # result -> g1^(c0 + c1*s + c2*s^2 + ...)
+
     if len(coeffs) > len(g1_powers_of_s):
         raise ValueError("Polynomial degree exceeds setup capacity")
 
@@ -76,9 +72,7 @@ def eval_poly_in_exponent_g1(coeffs: list[int], g1_powers_of_s: list[tuple]) -> 
     return acc
 
 def to_field_element(x) -> int:
-    """
-    Convert supported Python values into a field element.
-    """
+    # Converts int/strings to standard elements
     if isinstance(x, int):
         return x % curve_order
 
@@ -89,14 +83,12 @@ def to_field_element(x) -> int:
     raise TypeError(f"Unsupported element type: {type(x)}")
 class BLSAcc:
     def __init__(self, max_set_size: int, secret_s: int = 5):
-        """
-        Trusted setup with fixed secret_s by default for easier debugging.
+        # uses a fixed secret s
+        # Publishes:
+        #     g1^(1), g1^(s), g1^(s^2), ...
+        #     g2
+        #     g2^s
 
-        Publishes:
-            g1^(1), g1^(s), g1^(s^2), ...
-            g2
-            g2^s
-        """
         if max_set_size < 1:
             raise ValueError("max_set_size must be >= 1")
 
@@ -115,10 +107,8 @@ class BLSAcc:
         
 
     def accumulate(self, elements: list[int]) -> tuple[list[int], tuple]:
-        """
-        P(z) = ∏ (z + x) = polynomial
-        Acc = g1^(P(s)) = accumulator_point
-        """
+        # P(z) = ∏ (z + x) = polynomial
+        # Acc = g1^(P(s)) = accumulator_point
         elems = list(dict.fromkeys(elements))  # preserve order, remove duplicates
         if len(elems) > self.max_set_size:
             raise ValueError("Too many elements for this setup")
@@ -128,10 +118,9 @@ class BLSAcc:
         return poly, acc
 
     def prove_membership(self, poly: list[int], x: int) -> tuple:
-        """
-        If x is in the set then P(z) = (z + x)Q(z)
-        witness W = g1^(Q(s))
-        """
+        # If x is in the set then P(z) = (z + x)Q(z)
+        # witness W = g1^(Q(s))
+
         fx = to_field_element(x)
         quotient, remainder = poly_div_by_linear(poly, mod(-fx))
 
@@ -142,10 +131,9 @@ class BLSAcc:
         return witness
 
     def verify_membership(self, acc: tuple, x: int, witness: tuple) -> bool:
-        """
-        Verify that e(g2^(s+x), witness) == e(g2, acc)
-        Because of P(s) = (s + x)Q(s)
-        """
+        # Verify that e(g2^(s+x), witness) == e(g2, acc)
+        # Because of P(s) = (s + x)Q(s)
+        
         fx = to_field_element(x)
         g2_s_plus_x = add(self.g2_s, multiply(self.g2, mod(fx)))
 

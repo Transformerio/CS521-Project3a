@@ -254,5 +254,5 @@ def main():
     print(f"  Fake witness for 'eve'  ->  valid = {valid}  (expected False)")
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
