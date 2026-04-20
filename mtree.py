@@ -7,7 +7,7 @@ def H(x):
 class Tree:
     def __init__(self, elems):
         self.elems = sorted(elems)
-        print(self.elems)
+        # print(self.elems)
         self.numNodes = (2*len(self.elems))-1
 
         self.table = {}
@@ -22,7 +22,7 @@ class Tree:
             return leaf_hash
         
         if (len(x) % 2) != 0:
-            print("duplicating last leaf")
+            # print("duplicating last leaf")
             x.append(x[-1])
 
         left = x[:len(x)//2]
@@ -84,22 +84,15 @@ class Tree:
         right_proof = self.get_membership_proof(right)
         return (left_proof,right_proof)
 
-def verify(root, target, proof, proof_side):
-    totalHash = H(target)
-    for i in range(0, len(proof)):
-        if proof_side[i] == 'r':
-            print(f"hashing {totalHash} + {proof[i]}")
-            totalHash = H(totalHash + proof[i])
-        else:
-            totalHash = H(proof[i] + totalHash)
-            print(f"hashing {proof[i]} + {totalHash}")
-    return root == totalHash
+    def verify(self, root, target, proof, proof_side):
+        totalHash = H(target)
+        for i in range(0, len(proof)):
+            if proof_side[i] == 'r':
+                # print(f"hashing {totalHash} + {proof[i]}")
+                totalHash = H(totalHash + proof[i])
+            else:
+                totalHash = H(proof[i] + totalHash)
+                # print(f"hashing {proof[i]} + {totalHash}")
+        return root == totalHash
 
 
-elems = ['a','b', 'c', 'd','e','f','g','h']
-mt = Tree(elems)
-print(mt.get_map())
-mp = mt.get_membership_proof('c')
-print(mp)
-print(f"root: {mt.get_root()}")
-print(verify(mt.get_root(), 'c', mp[0], mp[1]))

@@ -2,10 +2,9 @@ from py_ecc.optimized_bls12_381 import G1, G2, add, multiply, pairing, curve_ord
 from dataclasses import dataclass
 from typing import Iterable, List, Sequence, Tuple
 import hashlib
+
 g1 = G1
 g2 = G2
-
-
 
 def mod(x: int) -> int:
     return x % curve_order
@@ -88,7 +87,7 @@ def to_field_element(x) -> int:
         return int.from_bytes(digest, "big") % curve_order
 
     raise TypeError(f"Unsupported element type: {type(x)}")
-class MiniBLSAccumulator:
+class BLSAcc:
     def __init__(self, max_set_size: int, secret_s: int = 5):
         """
         Trusted setup with fixed secret_s by default for easier debugging.
@@ -155,22 +154,9 @@ class MiniBLSAccumulator:
         return left == right
 
 
-bls = MiniBLSAccumulator(max_set_size=10, secret_s=5)
-
-elems = ['a','b', 'c', 'd','e','f','g','h']
-poly, acc = bls.accumulate(elems)
-
-print("Set elems =", elems)
-print("Polynomial coefficients =", poly)
-
-target = 'a'
-
-witness = bls.prove_membership(poly, target)
-ok = bls.verify_membership(acc, target, witness)
-print(f"membership({target}) =", ok)
 
 # Direct non-member proof attempt should fail
-try:
-    bls.prove_membership(poly, 7)
-except ValueError as e:
-    print("Non-member rejected correctly:", e)
+# try:
+#     bls.prove_membership(poly, 7)
+# except ValueError as e:
+#     print("Non-member rejected correctly:", e)
