@@ -60,7 +60,7 @@ class Tree:
         proof_side = []
         index_target = self.get_index((tree_height - 1), H(target))
         if index_target == -1:
-            print(f"target (\'{target}\') does not exist, generating non-membership proof...")
+            # print(f"target (\'{target}\') does not exist, generating non-membership proof...")
             return self.get_nonmembership_proof(target)
         curr_index = index_target
         lvl = tree_height - 1
@@ -82,6 +82,7 @@ class Tree:
         (left,right) = self.get_neighbors(self.elems, target)
         left_proof = self.get_membership_proof(left)
         right_proof = self.get_membership_proof(right)
+        print(left_proof)
         return (left_proof,right_proof)
 
     def verify(self, root, target, proof, proof_side):
@@ -95,4 +96,7 @@ class Tree:
                 # print(f"hashing {proof[i]} + {totalHash}")
         return root == totalHash
 
-
+    def verify_nonmembership_proof(self, root, target, proofL, proofR):
+        print(self.verify(root, target, proofL[0], proofL[1]))
+        print(self.verify(root, target, proofR[0], proofR[1]))
+        return self.verify(root, target, proofL[0], proofL[1]) and self.verify(root, target, proofR[0], proofR[1])

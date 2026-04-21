@@ -29,6 +29,15 @@ def build_characteristic_polynomial(elements: list[int]) -> list[int]:
         poly = poly_mul(poly, [fx, 1])
 
     return trim(poly)
+def poly_eval(poly: list[int], z: int) -> int:
+    # Evaluate poly(z) where poly = [c0, c1, c2, ...]
+    z = mod(z)
+    result = 0
+    power = 1
+    for coeff in poly:
+        result = mod(result + coeff * power)
+        power = mod(power * z)
+    return result
 
 def poly_div_by_linear(poly: list[int], c: int) -> tuple[list[int], int]:
     # Divide poly(z) by (z - c) using synthetic division
@@ -140,7 +149,42 @@ class BLSAcc:
         left = pairing(g2_s_plus_x, witness, final_exponentiate=True)
         right = pairing(self.g2, acc, final_exponentiate=True)
         return left == right
+    def prove_non_membership(self, poly: list[int], y: int) -> tuple:
+        # If x is NOT in the set then P(z) = (z + x)Q(z) + v
+        # where v = P(-y) != 0 for some potential factor y
 
+        fy = to_field_element(y)
+        v = poly_eval(poly, mod(-fy))
+        if v == 0:
+            raise ValueError(f"{y!r} is actually a member, so non-membership proof cannot be made")
+
+        # P(z) - v = (z + y)Q(z)
+        poly_minus_v = poly[:]
+        poly_minus_v[0] = mod(poly_minus_v[0] - v)
+
+        quotient, remainder = poly_div_by_linear(poly_minus_v, mod(-fy))
+        if remainder != 0:
+            raise ValueError("Unexpected nonzero remainder while forming non-membership witness")
+
+        witness = eval_poly_in_exponent_g1(quotient, self.g1_powers_of_s)
+        return (witness, v)
+    def verify_non_membership(self, acc: tuple, y, proof) -> bool:
+        """
+        Verify:
+            e(g2^(s+y), W) * e(g2, g1^v) == e(g2, acc)
+        where proof = (W, v)
+        """
+        witness, v = proof
+        fy = to_field_element(y)
+
+        g2_s_plus_y = add(self.g2_s, multiply(self.g2, fy))
+        g1_v = multiply(G1, mod(v))
+
+        left1 = pairing(g2_s_plus_y, witness, final_exponentiate=True)
+        left2 = pairing(self.g2, g1_v, final_exponentiate=True)
+        right = pairing(self.g2, acc, final_exponentiate=True)
+
+        return left1 * left2 == right
 
 
 # Direct non-member proof attempt should fail
