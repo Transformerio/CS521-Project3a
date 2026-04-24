@@ -12,6 +12,7 @@ class Tree:
 
         self.table = {}
         self.root = (self.build_map(0, self.elems))
+        # print(self.get_map())
     
     def build_map(self, lvl, x):
         if lvl not in self.table:
@@ -82,7 +83,6 @@ class Tree:
         (left,right) = self.get_neighbors(self.elems, target)
         left_proof = self.get_membership_proof(left)
         right_proof = self.get_membership_proof(right)
-        print(left_proof)
         return (left_proof,right_proof)
 
     def verify(self, root, target, proof, proof_side):
@@ -97,6 +97,7 @@ class Tree:
         return root == totalHash
 
     def verify_nonmembership_proof(self, root, target, proofL, proofR):
-        print(self.verify(root, target, proofL[0], proofL[1]))
-        print(self.verify(root, target, proofR[0], proofR[1]))
-        return self.verify(root, target, proofL[0], proofL[1]) and self.verify(root, target, proofR[0], proofR[1])
+        # print(self.verify(root, target, proofL[0], proofL[1]))
+        # print(self.verify(root, target, proofR[0], proofR[1]))
+        return (self.verify(root, target, proofL[0], proofL[1]) if proofL is not None else True) and (self.verify(root, target, proofR[0], proofR[1]) if proofR is not None else True)
+

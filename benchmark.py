@@ -29,14 +29,14 @@ def benchmark(label, m_proof_fn, m_verify_fn, nm_proof_fn, nm_verify_fn):
     return proof
 
 # Merkle Trees
-# mt = mtree.Tree(elems)
-# benchmark(
-#     "Merkle",
-#     lambda: mt.get_membership_proof(target),
-#     lambda proof: mt.verify(mt.get_root(), target, proof[0], proof[1]),
-#     lambda: mt.get_nonmembership_proof(nonTarget),
-#     lambda proof: mt.verify_nonmembership_proof(mt.get_root(), nonTarget, proof[0], proof[1])
-# )
+mt = mtree.Tree(elems)
+benchmark(
+    "Merkle",
+    lambda: mt.get_membership_proof(target),
+    lambda proof: mt.verify(mt.get_root(), target, proof[0], proof[1]),
+    lambda: mt.get_nonmembership_proof(nonTarget),
+    lambda proof: mt.verify_nonmembership_proof(mt.get_root(), nonTarget, proof[0], proof[1])
+)
 
 # BLS
 bls = bls.BLSAcc(max_set_size=10, secret_s=5)
