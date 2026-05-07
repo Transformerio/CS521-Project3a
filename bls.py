@@ -27,8 +27,8 @@ def build_characteristic_polynomial(elements: list[int]) -> list[int]:
     for x in elements:
         fx = to_field_element(x)
         poly = poly_mul(poly, [fx, 1])
-
     return trim(poly)
+
 def poly_eval(poly: list[int], z: int) -> int:
     # Evaluate poly(z) where poly = [c0, c1, c2, ...]
     z = mod(z)
@@ -66,6 +66,10 @@ def eval_poly_in_exponent_g1(coeffs: list[int], g1_powers_of_s: list[tuple]) -> 
 
     if len(coeffs) > len(g1_powers_of_s):
         raise ValueError("Polynomial degree exceeds setup capacity")
+    
+    # Detect the all-zero polynomial before doing any group operations
+    if all(mod(c) == 0 for c in coeffs):
+        raise ValueError("Refusing to encode the zero polynomial: the result would be the point at infinity, which is not a valid witness.")
 
     acc = None
     for i, coeff in enumerate(coeffs):
@@ -75,8 +79,9 @@ def eval_poly_in_exponent_g1(coeffs: list[int], g1_powers_of_s: list[tuple]) -> 
         term = multiply(g1_powers_of_s[i], coeff)
         acc = term if acc is None else add(acc, term)
 
-    if acc is None:
-        return multiply(G1, 0)  # point at infinity
+    # Redundant
+    # if acc is None:
+        # return multiply(G1, 0)  # point at infinity
 
     return acc
 
@@ -100,7 +105,6 @@ class BLSAcc:
 
         if max_set_size < 1:
             raise ValueError("max_set_size must be >= 1")
-
         self.max_set_size = max_set_size
         self.s = mod(secret_s)
 
@@ -118,12 +122,15 @@ class BLSAcc:
     def accumulate(self, elements: list[int]) -> tuple[list[int], tuple]:
         # P(z) = ∏ (z + x) = polynomial
         # Acc = g1^(P(s)) = accumulator_point
+        # print("hi")
         elems = list(dict.fromkeys(elements))  # preserve order, remove duplicates
         if len(elems) > self.max_set_size:
             raise ValueError("Too many elements for this setup")
 
+        # print("done building character poly")
         poly = build_characteristic_polynomial(elems)
         acc = eval_poly_in_exponent_g1(poly, self.g1_powers_of_s)
+        # print("done accumulating")
         return poly, acc
 
     def prove_membership(self, poly: list[int], x: int) -> tuple:
