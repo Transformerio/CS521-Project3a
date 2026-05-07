@@ -1,0 +1,54 @@
+
+Benchmark configuration
+  Iterations : 100
+  Set size   : 10
+  Elements   : ['qahftr', 'xckafn', 'afqofp', 'vausie', 'yiccwp', 'usnzjo', 'vqwpsb', 'fhcgch', 'qjjfgy', 'qpesej']
+  Member     : 'qjjfgy'
+  Non-member : 'fitbvu'
+  Schemes    : ['merkle', 'bls', 'lattice', 'rsa']
+
+======================================================================
+  Scheme : Merkle
+  Member : 'qjjfgy'   Non-member : 'fitbvu'   Iterations : 100
+======================================================================
+  [Merkle] membership proof   ('qjjfgy')            mean=   0.001ms  min=   0.001ms  max=   0.004ms  std=   0.000ms  (n=100)
+  [Merkle] membership verify  ('qjjfgy')            mean=   0.002ms  min=   0.002ms  max=   0.004ms  std=   0.000ms  (n=100)
+  [Merkle] non-membership proof   ('fitbvu')        mean=   0.002ms  min=   0.002ms  max=   0.005ms  std=   0.001ms  (n=100)
+  [Merkle] non-membership verify  ('fitbvu')        mean=   0.002ms  min=   0.002ms  max=   0.003ms  std=   0.000ms  (n=100)
+
+======================================================================
+  Scheme : BLS
+  Member : 'qjjfgy'   Non-member : 'fitbvu'   Iterations : 100
+======================================================================
+  [BLS] membership proof   ('qjjfgy')            mean=  36.370ms  min=  35.482ms  max=  37.319ms  std=   0.344ms  (n=100)
+  [BLS] membership verify  ('qjjfgy')            mean= 477.527ms  min= 473.672ms  max= 481.043ms  std=   1.096ms  (n=100)
+  [BLS] non-membership proof   ('fitbvu')        mean=  37.455ms  min=  37.007ms  max=  38.060ms  std=   0.185ms  (n=100)
+  [BLS] non-membership verify  ('fitbvu')        mean= 722.680ms  min= 714.834ms  max= 727.360ms  std=   2.650ms  (n=100)
+
+======================================================================
+  Scheme : Lattice
+  Member : 'qjjfgy'   Non-member : 'fitbvu'   Iterations : 100
+======================================================================
+  [Lattice] membership proof   ('qjjfgy')            mean=   0.001ms  min=   0.001ms  max=   0.005ms  std=   0.000ms  (n=100)
+  [Lattice] membership verify  ('qjjfgy')            mean=   0.294ms  min=   0.287ms  max=   0.493ms  std=   0.022ms  (n=100)
+  [Lattice] non-membership proof   ('fitbvu')        mean=   0.002ms  min=   0.001ms  max=   0.007ms  std=   0.001ms  (n=100)
+  [Lattice] non-membership verify  ('fitbvu')        mean=   0.576ms  min=   0.566ms  max=   0.607ms  std=   0.010ms  (n=100)
+
+======================================================================
+  Scheme : RSA
+  Member : 'qjjfgy'   Non-member : 'fitbvu'   Iterations : 100
+======================================================================
+  [RSA] membership proof   ('qjjfgy')            mean=   4.060ms  min=   3.989ms  max=   4.114ms  std=   0.022ms  (n=100)
+  [RSA] membership verify  ('qjjfgy')            mean=   1.553ms  min=   1.530ms  max=   1.586ms  std=   0.013ms  (n=100)
+  [RSA] non-membership proof   ('fitbvu')        mean=   3.623ms  min=   3.564ms  max=   3.669ms  std=   0.023ms  (n=100)
+  [RSA] non-membership verify  ('fitbvu')        mean=   1.065ms  min=   1.038ms  max=   1.102ms  std=   0.012ms  (n=100)
+
+======================================================================
+  SUMMARY  (mean latency in ms)
+======================================================================
+  Operation                     merkle         bls     lattice         rsa
+  ----------------------  ----------  ----------  ----------  ----------
+  Membership proof               0.001      36.370       0.001       4.060
+  Membership verify              0.002     477.527       0.294       1.553
+  Non-membership proof           0.002      37.455       0.002       3.623
+  Non-membership verify          0.002     722.680       0.576       1.065
