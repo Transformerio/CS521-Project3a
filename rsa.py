@@ -164,49 +164,131 @@ class RSAAccumulator:
         return pow(witness, e, self.N) == self.acc
 
     # ---- non-membership proof ---------------------------------------------
-
     def prove_non_membership(self, element: str):
         """
-        Non-membership proof using Bezout coefficients.
+        Bézout non-membership proof.
 
-        Since element is NOT in the set, gcd(e, product_of_all) = 1 (both are
-        products of distinct primes and e is not among them).
+        Extended GCD gives (g_val, a, b) satisfying:
+            e·a  +  product·b  = 1          … (★)
+        where
+            e       = prime representative of the NON-member
+            product = ∏ of prime reps of ALL accumulated elements
 
-        Find a, b such that  a*e + b*product = 1  (extended GCD).
-        Return (a, b, d) where d = g^b mod N  (precomputed for the verifier).
+        Note the argument ORDER to extended_gcd:
+            extended_gcd(e, product)  →  (g_val, a, b)
+            meaning  e·a + product·b = 1
 
-        Verification:  d^e  *  acc^a  ≡  g  (mod N)
+        *** Do NOT swap a and b — the identity is symmetric but the roles differ ***
+
+        We publish:
+            d = g^a  mod N          (uses 'a', the coefficient of e)
+            b                       (the coefficient of product, i.e. of acc's exponent)
+
+        Verification identity (derived from ★):
+            d^e · acc^b
+            = (g^a)^e · (g^product)^b
+            = g^(a·e)  · g^(product·b)
+            = g^(a·e + product·b)
+            = g^1 = g                           ✓
+
+        Both a and b may be negative → MUST use _modpow (not plain pow).
         """
         e = self._to_prime(element)
         if element in self.primes:
-            raise ValueError(f"'{element}' IS in the accumulator; cannot prove non-membership")
+            raise ValueError(
+                f"'{element}' IS in the accumulator; cannot prove non-membership"
+            )
 
         product = self._product_of_all()
+
+        # extended_gcd(e, product) → (gcd, coeff_of_e, coeff_of_product)
         g_val, a, b = extended_gcd(e, product)
-        # Bezout: a*e + b*product = 1
+        #              ↑  ↑  ↑
+        #              │  │  └─ b : coefficient of product  → used as acc exponent
+        #              │  └──── a : coefficient of e        → used to build d = g^a
+        #              └─────── must equal 1 (distinct primes guarantee this)
 
         if g_val != 1:
-            raise RuntimeError("GCD != 1 — element may share a prime representative with an accumulated element")
+            raise RuntimeError(
+                "GCD != 1 — element shares a prime representative with an "
+                "accumulated element (hash collision in hash_to_prime)"
+            )
 
-        # Proof = (b, d) where d = g^a mod N
-        # Verification: d^e * acc^b ≡ g (mod N)
-        #   because d^e * acc^b = g^(a*e) * g^(product*b) = g^(a*e + b*product) = g^1 = g
-        d = _modpow(self.g, a, self.N)
+        # d = g^a mod N.  'a' can be negative → _modpow handles via modular inverse.
+        d = _modpow(self.g, a, self.N)   # NOT pow() — pow() rejects negative exponents
 
+        # Return (b, d):
+        #   b  → will be used as the exponent of acc  in verification
+        #   d  → precomputed g^a, will be raised to e in verification
         return b, d
+
 
     def verify_non_membership(self, element: str, proof: tuple[int, int]) -> bool:
         """
-        Verify non-membership.
-
-        Given proof = (b, d) where d = g^a:
-            check  d^e  *  acc^b  ≡  g  (mod N)
+        Verify:  d^e · acc^b  ≡  g  (mod N)
+    
+        proof = (b, d)  where
+            b  = Bézout coefficient of product  (exponent applied to acc)
+            d  = g^a mod N                      (g raised to coeff of e, then raised to e)
+    
+        b may be negative → _modpow required for acc^b as well.
         """
         b, d = proof
+        #  ↑  ↑
+        #  │  └─ d = g^a;  raising to e gives g^(a·e)
+        #  └──── b = coeff of product; acc^b = (g^product)^b = g^(product·b)
+    
         e = self._to_prime(element)
-
+    
         lhs = (pow(d, e, self.N) * _modpow(self.acc, b, self.N)) % self.N
+        #       └─────────────┘   └────────────────────────────┘
+        #         d^e = g^(a·e)      acc^b = g^(product·b)
+        #       together: g^(a·e + product·b) = g^1 = g
+    
         return lhs == self.g
+
+    #def prove_non_membership(self, element: str):
+    #    """
+    #    Non-membership proof using Bezout coefficients.
+
+    #    Since element is NOT in the set, gcd(e, product_of_all) = 1 (both are
+    #    products of distinct primes and e is not among them).
+
+    #    Find a, b such that  a*e + b*product = 1  (extended GCD).
+    #    Return (a, b, d) where d = g^b mod N  (precomputed for the verifier).
+
+    #    Verification:  d^e  *  acc^a  ≡  g  (mod N)
+    #    """
+    #    e = self._to_prime(element)
+    #    if element in self.primes:
+    #        raise ValueError(f"'{element}' IS in the accumulator; cannot prove non-membership")
+
+    #    product = self._product_of_all()
+    #    g_val, a, b = extended_gcd(e, product)
+    #    # Bezout: a*e + b*product = 1
+
+    #    if g_val != 1:
+    #        raise RuntimeError("GCD != 1 — element may share a prime representative with an accumulated element")
+
+    #    # Proof = (b, d) where d = g^a mod N
+    #    # Verification: d^e * acc^b ≡ g (mod N)
+    #    #   because d^e * acc^b = g^(a*e) * g^(product*b) = g^(a*e + b*product) = g^1 = g
+    #    d = _modpow(self.g, a, self.N)
+
+    #    return b, d
+
+    #def verify_non_membership(self, element: str, proof: tuple[int, int]) -> bool:
+    #    """
+    #    Verify non-membership.
+
+    #    Given proof = (b, d) where d = g^a:
+    #        check  d^e  *  acc^b  ≡  g  (mod N)
+    #    """
+    #    b, d = proof
+    #    e = self._to_prime(element)
+
+    #    lhs = (pow(d, e, self.N) * _modpow(self.acc, b, self.N)) % self.N
+    #    return lhs == self.g
 
 
 # ---------------------------------------------------------------------------
@@ -254,5 +336,5 @@ def main():
     print(f"  Fake witness for 'eve'  ->  valid = {valid}  (expected False)")
 
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

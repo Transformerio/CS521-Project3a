@@ -12,6 +12,12 @@ Collision resistance reduces to the Short Integer Solution (SIS) problem,
 which in turn reduces to worst-case lattice problems (SIVP / GapSVP) —
 believed hard even for quantum computers.
 
+!!! 
+SECURITY REQUIREMENT: Inputs to the SIS hash MUST be binary vectors {0,1}^m.
+If arbitrary integers mod q were passed instead, the SIS hardness reduction breaks entirely
+an attacker could find collisions without solving a hard lattice problem.
+!!!
+
 To keep inputs binary (required for SIS hardness), every Z_q^n vector is
 bit-decomposed before it enters the hash.  Concretely:
 
