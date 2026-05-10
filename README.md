@@ -9,7 +9,7 @@ A benchmarking suite comparing four cryptographic accumulator constructions impl
  
 ## Overview
  
-A cryptographic accumulator compresses a set of elements into a single compact value and supports succinct membership and non-membership proofs without revealing the full set. This project benchmarks four schemes across accumulation time, proof generation time, proof size, and verification time at set sizes ranging from 10² to 10⁶.
+A cryptographic accumulator compresses a set of elements into a single compact value and supports succinct membership and non-membership proofs without revealing the full set. This project benchmarks four schemes across accumulation time, proof generation time, proof size, and verification time.
  
 | Scheme  | Security Assumption | Post-Quantum | Trusted Setup |
 |---------|--------------------:|:------------:|:-------------:|
