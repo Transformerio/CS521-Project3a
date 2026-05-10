@@ -76,26 +76,4 @@ Merkle tree whose compression function is the Ajtai/SIS hash `h_A(x) = A·x mod 
  
 ### What it shows
  
-The visualizer has four scheme tabs — **RSA**, **Lattice**, **Merkle**, and **Pairing (BLS/KZG)** — each with the same interactive structure:
- 
-- **Element set toggle**: Click any of the eight available elements (alice, bob, charlie, dave, eve, frank, grace, heidi) to add or remove them from the accumulator. All visualizations update instantly.
-- **Public parameters panel**: Displays the scheme's setup values — the RSA modulus `N = p × q`, the lattice SIS parameters `(n, q, log q, m)`, or the bilinear group order.
-- **Element mapping table**: Shows how each element maps to its internal representation — a prime representative for RSA, a SHA-256 leaf hash for Merkle, a SIS hash vector for Lattice, or a field element for BLS.
-- **Accumulator display**: Shows the current accumulator value and the formula used to derive it.
-- **Proof explorer**: Switch between membership and non-membership tabs, click any element, and see a full step-by-step breakdown of how the proof is constructed and verified, including intermediate values and a pass/fail badge.
-### Scheme-specific features
- 
-**RSA**: Shows Bézout coefficients `(a, b)` for non-membership, the witness `w = g^(∏eᵢ) mod N` for membership, and the verification equation `w^e ≡ acc (mod N)`.
- 
-**Lattice**: Renders the full SIS Merkle tree as an SVG diagram. Clicking a membership element highlights the authentication path (teal) and sibling nodes (amber) through the tree. Non-membership shows the sorted bracketing neighbours and their auth paths.
- 
-**Merkle**: Same animated tree diagram as Lattice but using the SHA-256 compression function. The proof explorer shows each sibling hash in the O(log n) path from leaf to root.
- 
-**Pairing (BLS/KZG)**: Displays the structured reference string (SRS), the characteristic polynomial `χ_S(x) = ∏(x + eᵢ)` with formatted coefficients, and the pairing verification equations. Membership shows the KZG opening proof; non-membership shows the remainder-based proof with all three pairing terms.
- 
-> The visualizer uses small toy parameters (a ~17-bit RSA modulus, an 8-dimensional SIS lattice, a 17-bit prime-order field) to keep computations fast in JavaScript while staying faithful to the constructions' structure.
- 
----
-
-
- 
+The visualizer has four scheme tabs — **RSA**, **Lattice**, **Merkle**, and **Pairing (BLS/KZG)** — each with the same interactive structure.
