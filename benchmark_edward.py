@@ -13,7 +13,7 @@ def get_size(obj) -> int:
         return (obj.bit_length() + 7) // 8  # actual byte length of the integer
     return sys.getsizeof(obj)
 
-size = 10**5
+size = 10**6
 elems = np.arange(size, dtype=np.int32)
 np.random.shuffle(elems)
 elems = elems.astype(str)
@@ -26,24 +26,24 @@ def benchmark(label, acc_obj, m_proof_fn, m_verify_fn, nm_proof_fn, nm_verify_fn
     ts = time.time()
     proof = m_proof_fn()
     te = time.time()
-    print(f"[{label}] member proof ({target}) = {te - ts:.6f} sec")
+    print(f"[{label}] member proof ({target}) = {te - ts:.6f} s")
     print(f"[{label}] member proof size ({get_size(proof)}) bytes")
 
     ts = time.time()
     m_verify_fn(proof)
     te = time.time()
-    print(f"[{label}] verify({target}) = {te - ts:.6f} sec")
+    print(f"[{label}] verify({target}) = {te - ts:.6f} s")
 
     ts = time.time()
     proof = nm_proof_fn()
     te = time.time()
-    print(f"[{label}] non-member proof ({nonTarget}) = {te - ts:.6f} sec")
+    print(f"[{label}] non-member proof ({nonTarget}) = {te - ts:.6f} s")
     print(f"[{label}] non-member proof size ({get_size(proof)}) bytes")
 
     ts = time.time()
     nm_verify_fn(proof)
     te = time.time()
-    print(f"[{label}] non-member verify({nonTarget}) = {te - ts:.6f} sec")
+    print(f"[{label}] non-member verify({nonTarget}) = {te - ts:.6f} s")
 
     return proof
 
@@ -51,7 +51,7 @@ def benchmark(label, acc_obj, m_proof_fn, m_verify_fn, nm_proof_fn, nm_verify_fn
 ts = time.time()
 mt = mtree.Tree(elems)
 te = time.time()
-print(f"[Merkle] accumulate took {te - ts:.6f} secs")
+print(f"[Merkle] accumulate took {te - ts:.6f} s")
 benchmark(
     "Merkle",
     mt.get_root(),
@@ -62,26 +62,26 @@ benchmark(
 )
 
 # BLS
-ts = time.time()
-bls = bls.BLSAcc(max_set_size=size, secret_s=5)
-poly, acc = bls.accumulate(elems)
-te = time.time()
-print(f"[BLS] accumulate took {te - ts:.6f} secs")
-benchmark(
-    "BLS",
-    acc,
-    lambda: bls.prove_membership(poly, target), # = witness
-    lambda proof: bls.verify_membership(acc, target, proof),
-    lambda: bls.prove_non_membership(poly, nonTarget), # = witness
-    lambda proof: bls.verify_non_membership(acc, nonTarget, proof)
-)
+# ts = time.time()
+# bls = bls.BLSAcc(max_set_size=size, secret_s=5)
+# poly, acc = bls.accumulate(elems)
+# te = time.time()
+# print(f"[BLS] accumulate took {te - ts:.6f} s")
+# benchmark(
+#     "BLS",
+#     acc,
+#     lambda: bls.prove_membership(poly, target), # = witness
+#     lambda proof: bls.verify_membership(acc, target, proof),
+#     lambda: bls.prove_non_membership(poly, nonTarget), # = witness
+#     lambda proof: bls.verify_non_membership(acc, nonTarget, proof)
+# )
 
 # Lattice
 ts = time.time()
 lattice = lattice.LatticeAccumulator(seed=0)
 lat_acc = lattice.accumulate(elems)
 te = time.time()
-print(f"[Lattice] accumulate took {te - ts:.6f} secs")
+print(f"[Lattice] accumulate took {te - ts:.6f} s")
 benchmark(
     "Lattice",
     lat_acc,
@@ -96,7 +96,7 @@ ts = time.time()
 rsa = rsa.RSAAccumulator(bits=1024)
 rsa.batch_add(elems)
 te = time.time()
-print(f"[RSA] accumulate took {te - ts:.6f} secs")
+print(f"[RSA] accumulate took {te - ts:.6f} s")
 benchmark(
     "RSA",
     rsa.acc,
