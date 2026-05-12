@@ -24,7 +24,7 @@ class Tree:
         
         if (len(x) % 2) != 0:
             # print("duplicating last leaf")
-            x.append(x[-1])
+            x = x + [x[-1]] # This does not mutate x in place. If x is self.elems, append would corrupt
 
         left = x[:len(x)//2]
         right = x[len(x)//2:]
