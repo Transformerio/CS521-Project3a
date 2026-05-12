@@ -4,8 +4,9 @@ RSA Accumulator with Membership and Non-Membership Proofs
 Setup: Generate RSA modulus N = p * q (trusted setup).
 Accumulate: acc = g^(product of prime reps) mod N
 Membership proof: witness w such that w^e = acc mod N
-Non-membership proof: Bezout coefficients (a, b) such that a*e + b*product = 1,
-    then verify g^b * acc^a = acc' (Li-Li-Xue scheme)
+Non-membership proof: extended_gcd(e, product) gives a*e + b*product = 1.
+The proof is (b, d), where d = g^a mod N.
+Verification checks d^e * acc^b == g mod N.
 """
 
 import random
