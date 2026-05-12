@@ -40,6 +40,7 @@ def get_size(obj) -> int:
     # Fallback: Python object overhead.
     return sys.getsizeof(obj)
 
+# CHANGE THE SIZE HERE
 size = 10**2
 np.random.seed(0)
 elems = np.arange(size, dtype=np.int32)
