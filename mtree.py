@@ -62,7 +62,7 @@ class Tree:
         index_target = self.get_index((tree_height - 1), H(target))
         if index_target == -1:
             # print(f"target (\'{target}\') does not exist, generating non-membership proof...")
-            return self.get_nonmembership_proof(target)
+            raise ValueError(f"{target} is not in the accumulator")
         curr_index = index_target
         lvl = tree_height - 1
         for i in range(0, tree_height - 1):
@@ -83,7 +83,7 @@ class Tree:
         (left,right) = self.get_neighbors(self.elems, target)
         left_proof = self.get_membership_proof(left)
         right_proof = self.get_membership_proof(right)
-        return (left_proof,right_proof)
+        return (left,right), (left_proof,right_proof)
 
     def verify(self, root, target, proof, proof_side):
         totalHash = H(target)
@@ -96,8 +96,19 @@ class Tree:
                 # print(f"hashing {proof[i]} + {totalHash}")
         return root == totalHash
 
-    def verify_nonmembership_proof(self, root, target, proofL, proofR):
-        # print(self.verify(root, target, proofL[0], proofL[1]))
-        # print(self.verify(root, target, proofR[0], proofR[1]))
-        return (self.verify(root, target, proofL[0], proofL[1]) if proofL is not None else True) and (self.verify(root, target, proofR[0], proofR[1]) if proofR is not None else True)
+    def verify_nonmembership_proof(self, root, nonTarget, targetL, targetR, proofL, proofR):
+        left_ok = True
+        right_ok = True
+
+        if targetL is not None:
+            if not (targetL < nonTarget):
+                return False
+            left_ok = self.verify(root, targetL, proofL[0], proofL[1])
+
+        if targetR is not None:
+            if not (nonTarget < targetR):
+                return False
+            right_ok = self.verify(root, targetR, proofR[0], proofR[1])
+
+        return left_ok and right_ok
 
