@@ -247,50 +247,6 @@ class RSAAccumulator:
     
         return lhs == self.g
 
-    #def prove_non_membership(self, element: str):
-    #    """
-    #    Non-membership proof using Bezout coefficients.
-
-    #    Since element is NOT in the set, gcd(e, product_of_all) = 1 (both are
-    #    products of distinct primes and e is not among them).
-
-    #    Find a, b such that  a*e + b*product = 1  (extended GCD).
-    #    Return (a, b, d) where d = g^b mod N  (precomputed for the verifier).
-
-    #    Verification:  d^e  *  acc^a  ≡  g  (mod N)
-    #    """
-    #    e = self._to_prime(element)
-    #    if element in self.primes:
-    #        raise ValueError(f"'{element}' IS in the accumulator; cannot prove non-membership")
-
-    #    product = self._product_of_all()
-    #    g_val, a, b = extended_gcd(e, product)
-    #    # Bezout: a*e + b*product = 1
-
-    #    if g_val != 1:
-    #        raise RuntimeError("GCD != 1 — element may share a prime representative with an accumulated element")
-
-    #    # Proof = (b, d) where d = g^a mod N
-    #    # Verification: d^e * acc^b ≡ g (mod N)
-    #    #   because d^e * acc^b = g^(a*e) * g^(product*b) = g^(a*e + b*product) = g^1 = g
-    #    d = _modpow(self.g, a, self.N)
-
-    #    return b, d
-
-    #def verify_non_membership(self, element: str, proof: tuple[int, int]) -> bool:
-    #    """
-    #    Verify non-membership.
-
-    #    Given proof = (b, d) where d = g^a:
-    #        check  d^e  *  acc^b  ≡  g  (mod N)
-    #    """
-    #    b, d = proof
-    #    e = self._to_prime(element)
-
-    #    lhs = (pow(d, e, self.N) * _modpow(self.acc, b, self.N)) % self.N
-    #    return lhs == self.g
-
-
 # ---------------------------------------------------------------------------
 # Demo
 # ---------------------------------------------------------------------------
